@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from vulnscope import __version__
@@ -23,6 +24,13 @@ _STATE_LABEL = {
 }
 
 
+def _fenced(text: str, info: str = "") -> list[str]:
+    """Fence ``text`` with more backticks than it contains, so it cannot break out."""
+    longest = max((len(run) for run in re.findall(r"`+", text)), default=0)
+    ticks = "`" * max(3, longest + 1)
+    return [f"{ticks}{info}", text, ticks]
+
+
 def _suggestion_block(suggestion: Suggestion) -> list[str]:
     who = f" ({suggestion.reviewer})" if suggestion.reviewer else ""
     lines = [
@@ -32,7 +40,7 @@ def _suggestion_block(suggestion: Suggestion) -> list[str]:
         suggestion.payload.explanation,
     ]
     if suggestion.payload.patch.strip():
-        lines += ["", "```diff", suggestion.payload.patch.rstrip(), "```"]
+        lines += ["", *_fenced(suggestion.payload.patch.rstrip(), "diff")]
     return lines
 
 
@@ -64,7 +72,7 @@ def render_markdown(
             lines.append(f"- Fixed in: {', '.join(f.fix_versions)}")
         lines += ["- Why this score:", *[f"  - {r}" for r in s.reasons], ""]
         if item.snippet:
-            lines += ["```", item.snippet, "```", ""]
+            lines += [*_fenced(item.snippet), ""]
         for suggestion in suggestions.get(f.fingerprint, []):
             lines += [*_suggestion_block(suggestion), ""]
     return "\n".join(lines).rstrip() + "\n"
