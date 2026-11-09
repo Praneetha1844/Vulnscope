@@ -11,6 +11,11 @@ requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Praneetha Potharaju" }]
 dependencies = ["pydantic>=2.6"]
+keywords = ["security", "sast", "sca", "sarif", "triage"]
+
+[project.urls]
+Source = "https://github.com/Praneetha1844/Vulnscope"
+Documentation = "https://github.com/Praneetha1844/Vulnscope/tree/main/docs"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.5", "mypy>=1.10", "pre-commit>=3.7"]

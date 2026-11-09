@@ -30,12 +30,12 @@ flowchart TB
 
 | Module | Responsibility | Failure behaviour |
 | --- | --- | --- |
-| `parsers` | Convert four formats to `Finding` | Raises `ParseError` on malformed input; never returns partial output |
+| `parsers` | Convert SARIF, OSV, pip-audit and npm audit (v6 and v7+) to `Finding` | Raises `ParseError` on malformed input; never returns partial output |
 | `dedupe` | Merge across tools, compute fingerprints | Pure; keeps the higher severity |
 | `context` | Read lines around a finding | Returns `None` for paths outside the root, missing or oversized files |
 | `reachability` | Import graph and entry points | Returns `unknown` when it cannot decide |
 | `scoring` | Combine severity, reachability, exploit list | Returns every term in `ScoreBreakdown` |
-| `llm` | HTTP providers and a fake | Raises `LLMError`; refuses non-HTTP URLs |
+| `llm` | HTTP providers and a fake | Raises `LLMError`; refuses non-HTTP URLs and sending an API key over plain http to a remote host |
 | `remediation` | Prompt, parse, validate, retry once | Raises `SuggestionRejected` after the attempt limit |
 | `patch_check` | Validate a unified diff in memory | Returns a list of problems; never writes files |
 | `review` / `store` | State machine and SQLite | Rejects invalid transitions; requires a reviewer name |

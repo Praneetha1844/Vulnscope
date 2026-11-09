@@ -19,7 +19,7 @@ published**, and the code has not been published to PyPI. See [Limitations](#lim
 
 | Area | What it does |
 | --- | --- |
-| Ingest | SARIF 2.1.0 (for example Semgrep), OSV-Scanner JSON, `pip-audit` JSON, `npm audit` JSON |
+| Ingest | SARIF 2.1.0 (for example Semgrep), OSV-Scanner JSON, `pip-audit` JSON, `npm audit` JSON (npm 6 and 7+) |
 | Normalise | One `Finding` model, severity bands, CVSS when the tool supplies it |
 | Merge | Same rule and position from two tools collapse; dependency findings merge through shared advisory aliases |
 | Fingerprint | Stable ids that survive line-number drift; ordinal suffix for repeated hits |
@@ -50,7 +50,8 @@ flowchart LR
 ```
 
 More detail is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Design decisions are recorded in
-[docs/adr](docs/adr).
+[docs/adr](docs/adr). The full documentation index is [docs/index.md](docs/index.md): command
+reference, configuration, threat model, glossary, development guide and roadmap.
 
 ## Quick start
 
@@ -132,7 +133,7 @@ src/vulnscope/
   report.py        Markdown and SARIF
   cli.py           command line
 tests/             pytest suite using hand-written sample reports
-docs/              architecture and decision records
+docs/              CLI and configuration reference, architecture, threat model, decision records
 ```
 
 ## Limitations
@@ -145,8 +146,10 @@ docs/              architecture and decision records
   severity label are used.
 - **Model output is untrusted.** Suggestions are validated for shape and patch safety, not for
   correctness. The `confidence` value is self-reported and not calibrated.
-- **Prompt injection is mitigated, not eliminated.** Excerpts are treated as data and truncated,
-  and patches are constrained, but a determined payload could still influence an explanation.
+- **Prompt injection is mitigated, not eliminated.** Excerpts are delimited, treated as data and
+  truncated, output must match a strict JSON schema, and patches are constrained, but a
+  determined payload could still influence an explanation. See [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
+- **No authentication.** Anyone who can write the SQLite file can change review decisions.
 - **Fingerprints trade precision for stability.** Identical rule, file and message hits are
   distinguished only by their order in the file.
 - **Not evaluated.** There is no measured precision, recall or time-saved figure, and none is claimed.
@@ -167,6 +170,10 @@ docs/              architecture and decision records
 make install   # editable install with dev tools
 make check     # ruff, mypy and pytest
 ```
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for how to report a vulnerability.
 
 ## License
 
