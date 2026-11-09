@@ -65,6 +65,9 @@ class OpenAICompatProvider:
     def __init__(self, model: str, base_url: str, api_key: str, timeout: float = 120.0):
         if not api_key:
             raise LLMError("an API key is required for the OpenAI-compatible provider")
+        local = base_url.startswith(("http://localhost", "http://127.0.0.1"))
+        if not (base_url.startswith("https://") or local):
+            raise LLMError("the API key would be sent unencrypted; use an https base URL")
         self.model, self.base_url, self.api_key = model, base_url.rstrip("/"), api_key
         self.timeout = timeout
 
