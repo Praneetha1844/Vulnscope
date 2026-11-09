@@ -158,13 +158,18 @@ class ReviewStore:
         ).fetchone()
         if row is None:
             raise KeyError(f"unknown suggestion {suggestion_id}")
-        new_state = transition(ReviewState(row["state"]), target)
+        current = ReviewState(row["state"])
+        new_state = transition(current, target)
         with self._db:
-            self._db.execute(
+            # Matching on the state we validated against keeps two reviewers from
+            # overwriting each other's decision.
+            cursor = self._db.execute(
                 "UPDATE suggestions SET state = ?, reviewer = ?, note = ?, updated = ? "
-                "WHERE id = ?",
-                (new_state.value, reviewer.strip(), note, _now(), suggestion_id),
+                "WHERE id = ? AND state = ?",
+                (new_state.value, reviewer.strip(), note, _now(), suggestion_id, current.value),
             )
+        if cursor.rowcount != 1:
+            raise ValueError(f"suggestion {suggestion_id} changed state while being updated")
 
     # ---- reviewer decisions and suppression rules
 
