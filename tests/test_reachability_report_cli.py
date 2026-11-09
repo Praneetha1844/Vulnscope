@@ -125,3 +125,28 @@ def test_absolute_report_paths_are_made_relative_to_the_scan_root(tmp_path) -> N
     located = next(s for s in scored if s.finding.location)
     assert located.finding.location.path == "src/db.py"
     assert located.snippet is not None
+
+
+def test_cli_triage_stores_pending_suggestions_and_review_decides(
+    project, tmp_path, capsys, monkeypatch
+) -> None:
+    from vulnscope import cli
+    from vulnscope.llm import FakeProvider
+
+    sarif = tmp_path / "semgrep.json"
+    sarif.write_text(json.dumps(SARIF_SAMPLE), encoding="utf-8")
+    db = str(tmp_path / "triage.db")
+    fields = {"explanation": "Use a parameterised query.", "patch": "", "confidence": 0.6}
+    reply = json.dumps(fields)
+    monkeypatch.setattr(cli, "build_provider", lambda *a, **k: FakeProvider([reply, reply]))
+
+    assert main(["--db", db, "scan", str(sarif), "--root", str(project)]) == 0
+    capsys.readouterr()
+    assert main(["--db", db, "triage", "--model", "m", "--root", str(project), "--top", "1"]) == 0
+    assert "stored as pending" in capsys.readouterr().out
+
+    assert main(["--db", db, "review", "list", "--state", "pending"]) == 0
+    assert "Use a parameterised query." in capsys.readouterr().out
+    assert main(["--db", db, "review", "accept", "1", "--reviewer", "praneetha"]) == 0
+    assert main(["--db", db, "review", "reject", "1", "--reviewer", "praneetha"]) == 1
+    assert "cannot move" in capsys.readouterr().err
