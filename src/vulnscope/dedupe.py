@@ -80,7 +80,8 @@ def assign_fingerprints(findings: list[Finding]) -> list[Finding]:
             )
         else:
             advisory = sorted(finding.advisory_ids)[0] if finding.advisory_ids else finding.rule_id
-            base = "|".join(["dep", (finding.package or "").lower(), finding.version or "", advisory])
+            package = (finding.package or "").lower()
+            base = "|".join(["dep", package, finding.version or "", advisory])
         digest = hashlib.sha256(base.encode("utf-8")).hexdigest()[:16]
         ordinal = seen.get(digest, 0)
         seen[digest] = ordinal + 1

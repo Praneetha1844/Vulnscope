@@ -14,7 +14,9 @@ from pathlib import Path
 
 from vulnscope.models import Finding, FindingKind
 
-SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "site-packages", "build", "dist", "__pycache__"}
+SKIP_DIRS = {
+    ".git", ".venv", "venv", "node_modules", "site-packages", "build", "dist", "__pycache__"
+}
 ENTRY_NAMES = {"__main__.py", "main.py", "app.py", "cli.py", "manage.py", "wsgi.py", "asgi.py"}
 IMPORT_ALIASES = {
     "pyyaml": "yaml",
@@ -121,7 +123,9 @@ class ImportIndex:
     def package_reachability(self, package: str) -> Reachability:
         name = IMPORT_ALIASES.get(package.lower(), package.lower().replace("-", "_"))
         importers = [
-            f for f, mods in self.imports.items() if any(m.split(".")[0].lower() == name for m in mods)
+            f
+            for f, mods in self.imports.items()
+            if any(m.split(".")[0].lower() == name for m in mods)
         ]
         if not importers or not self.entrypoints:
             return Reachability.UNKNOWN  # may be a transitive or non-Python dependency
