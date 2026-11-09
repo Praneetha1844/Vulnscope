@@ -86,7 +86,7 @@ class ImportIndex:
                 continue
             try:
                 tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
-            except SyntaxError:
+            except (SyntaxError, ValueError, OSError):  # ValueError: null bytes in source
                 continue
             key = rel.as_posix()
             module = _module_name(rel)

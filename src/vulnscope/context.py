@@ -15,9 +15,12 @@ def read_snippet(root: Path, location: Location, radius: int = 3) -> str | None:
     target = (root / location.path).resolve()
     if not target.is_relative_to(root) or not target.is_file():
         return None
-    if target.stat().st_size > MAX_FILE_BYTES:
+    try:
+        if target.stat().st_size > MAX_FILE_BYTES:
+            return None
+        lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
         return None
-    lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
     if location.start_line > len(lines):
         return None
     start = max(location.start_line - radius, 1)

@@ -123,4 +123,6 @@ def check_patch(diff: str, flagged_path: str, root: Path) -> list[str]:
         apply_hunks(target.read_text(encoding="utf-8").splitlines(), hunks)
     except (PatchError, UnicodeDecodeError) as exc:
         return [f"patch does not apply cleanly: {exc}"]
+    except OSError as exc:
+        return [f"flagged file cannot be read: {exc}"]
     return []

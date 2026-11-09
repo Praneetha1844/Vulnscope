@@ -74,3 +74,12 @@ def test_truncated_hunk_is_rejected(root) -> None:
 def test_apply_hunks_handles_pure_insertion() -> None:
     result = apply_hunks(["a", "b"], [(1, 0, [("+", "new")])])
     assert result == ["a", "new", "b"]
+
+
+def test_snippet_reader_ignores_paths_outside_the_root(tmp_path) -> None:
+    from vulnscope.context import read_snippet
+    from vulnscope.models import Location
+
+    (tmp_path / "inside.py").write_text("a = 1\nb = 2\n", encoding="utf-8")
+    assert read_snippet(tmp_path, Location(path="inside.py", start_line=1, end_line=1))
+    assert read_snippet(tmp_path, Location(path="../outside.py", start_line=1, end_line=1)) is None
