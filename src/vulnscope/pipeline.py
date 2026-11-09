@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from vulnscope.context import read_snippet
 from vulnscope.dedupe import assign_fingerprints, merge_duplicates
@@ -24,6 +24,25 @@ def load_known_exploited(path: Path | None) -> frozenset[str]:
     )
 
 
+def _relativise(finding: Finding, root: Path) -> Finding:
+    """Turn an absolute report path into one relative to the scan root.
+
+    Reports from some tools use absolute paths, others use a leading slash to mean the
+    repository root. A path outside the root is treated as the latter; later file access
+    is confined to the root either way.
+    """
+    location = finding.location
+    if location is None or not location.path.startswith("/"):
+        return finding
+    path = PurePosixPath(location.path)
+    try:
+        relative = path.relative_to(PurePosixPath(root.resolve().as_posix()))
+    except ValueError:
+        relative = PurePosixPath(location.path.lstrip("/"))
+    moved = location.model_copy(update={"path": relative.as_posix()})
+    return finding.model_copy(update={"location": moved})
+
+
 def scan(
     inputs: Iterable[Path],
     root: Path,
@@ -33,7 +52,7 @@ def scan(
     """Return (ranked findings, suppressed findings)."""
     raw: list[Finding] = []
     for path in inputs:
-        raw.extend(load_findings(path))
+        raw.extend(_relativise(f, root) for f in load_findings(path))
     findings, suppressed = apply_suppressions(
         assign_fingerprints(merge_duplicates(raw)), suppression_rules or []
     )

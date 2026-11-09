@@ -91,3 +91,37 @@ def test_remote_provider_requires_explicit_consent(tmp_path, capsys) -> None:
     db = str(tmp_path / "x.db")
     assert main(["--db", db, "triage", "--provider", "openai", "--model", "m"]) == 1
     assert "--allow-remote" in capsys.readouterr().err
+
+
+def test_markdown_fences_grow_around_embedded_backticks() -> None:
+    item = make_scored(snippet="    1 | x = '''```'''")
+    text = render_markdown([item])
+    assert "````" in text
+    pending = Suggestion(
+        fingerprint="fp-0",
+        payload=SuggestionPayload(
+            explanation="Quote handling.", patch="--- a/a.py\n+++ b/a.py\n+```\n", confidence=0.5
+        ),
+    )
+    assert "````diff" in render_markdown([make_scored()], {"fp-0": [pending]})
+
+
+def test_absolute_report_paths_are_made_relative_to_the_scan_root(tmp_path) -> None:
+    from copy import deepcopy
+
+    from vulnscope.pipeline import scan
+
+    source = tmp_path / "src" / "db.py"
+    source.parent.mkdir()
+    source.write_text("a = 1\n" * 14, encoding="utf-8")
+    if not source.as_posix().startswith("/"):
+        pytest.skip("absolute POSIX paths only")
+    document = deepcopy(SARIF_SAMPLE)
+    uri = document["runs"][0]["results"][0]["locations"][0]["physicalLocation"]["artifactLocation"]
+    uri["uri"] = f"file://{source.as_posix()}"
+    report = tmp_path / "report.sarif"
+    report.write_text(json.dumps(document), encoding="utf-8")
+    scored, _ = scan([report], tmp_path)
+    located = next(s for s in scored if s.finding.location)
+    assert located.finding.location.path == "src/db.py"
+    assert located.snippet is not None

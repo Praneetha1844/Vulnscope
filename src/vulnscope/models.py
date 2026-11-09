@@ -52,9 +52,8 @@ class Location(BaseModel):
     @classmethod
     def _relative_posix(cls, value: str) -> str:
         cleaned = value.replace("\\", "/")
-        if cleaned.startswith("file://"):
-            cleaned = cleaned.removeprefix("file://")
-        return cleaned.lstrip("/") if not cleaned.startswith("..") else cleaned
+        # Absolute paths are kept as given; the pipeline makes them relative to the scan root.
+        return cleaned.removeprefix("file://")
 
 
 class Finding(BaseModel):
@@ -97,8 +96,8 @@ class ScoredFinding(BaseModel):
 class SuggestionPayload(BaseModel):
     """The structured output we require from a language model."""
 
-    explanation: str = Field(min_length=10)
-    patch: str = ""
+    explanation: str = Field(min_length=10, max_length=4000)
+    patch: str = Field(default="", max_length=60_000)
     confidence: float = Field(ge=0.0, le=1.0)
 
 
