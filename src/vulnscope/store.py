@@ -6,12 +6,11 @@ import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 from types import TracebackType
-from typing import Literal
 
 from vulnscope.models import ReviewState, ScoredFinding, Suggestion, SuggestionPayload
 from vulnscope.review import transition
 
-Verdict = Literal["false_positive", "true_positive"]
+VERDICTS = ("false_positive", "true_positive")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS findings (
@@ -125,7 +124,8 @@ class ReviewStore:
     def list_suggestions(
         self, fingerprint: str | None = None, state: ReviewState | None = None
     ) -> list[tuple[int, Suggestion]]:
-        clauses, params = [], []
+        clauses: list[str] = []
+        params: list[str] = []
         if fingerprint:
             clauses.append("fingerprint = ?")
             params.append(fingerprint)
@@ -168,7 +168,9 @@ class ReviewStore:
 
     # ---- reviewer decisions and suppression rules
 
-    def record_decision(self, fingerprint: str, verdict: Verdict, reviewer: str) -> None:
+    def record_decision(self, fingerprint: str, verdict: str, reviewer: str) -> None:
+        if verdict not in VERDICTS:
+            raise ValueError(f"verdict must be one of {VERDICTS}")
         if not reviewer.strip():
             raise ValueError("a reviewer name is required")
         item = self.get_finding(fingerprint)
