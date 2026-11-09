@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "vulnscope"
 version = "0.1.0"
-description = "Triage assistant for SAST and dependency findings with human-reviewed remediation suggestions."
+description = "Triage tool for SAST and dependency findings with human-reviewed remediation suggestions."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
