@@ -2,7 +2,7 @@ import json
 from copy import deepcopy
 
 import pytest
-from helpers import NPM_SAMPLE, OSV_SAMPLE, PIP_AUDIT_SAMPLE, SARIF_SAMPLE
+from helpers import NPM_LEGACY_SAMPLE, NPM_SAMPLE, OSV_SAMPLE, PIP_AUDIT_SAMPLE, SARIF_SAMPLE
 
 from vulnscope.models import FindingKind, Severity
 from vulnscope.parsers import (
@@ -97,3 +97,23 @@ def test_load_findings_reports_unreadable_input(tmp_path) -> None:
     good = tmp_path / "osv.json"
     good.write_text(json.dumps(OSV_SAMPLE), encoding="utf-8")
     assert len(load_findings(good)) == 1
+
+
+def test_legacy_npm_audit_shape_is_supported() -> None:
+    (finding,) = parse_document(NPM_LEGACY_SAMPLE)
+    assert finding.package == "minimist" and finding.severity is Severity.CRITICAL
+    assert finding.advisory_ids == ["CVE-2020-7598", "GHSA-vh95-rmgr-6w4m"]
+    assert finding.dependency_path == ["a", "b", "minimist"]
+    assert finding.fix_versions == [">=1.2.3"]
+
+
+def test_legacy_npm_advisory_without_module_is_rejected() -> None:
+    with pytest.raises(ParseError):
+        parse_document({"advisories": {"1": {"title": "no module"}}})
+
+
+def test_bare_list_from_older_pip_audit_is_supported() -> None:
+    (finding,) = parse_document(PIP_AUDIT_SAMPLE["dependencies"])
+    assert finding.package == "requests"
+    with pytest.raises(ParseError):
+        parse_document([])

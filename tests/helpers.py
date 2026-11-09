@@ -140,3 +140,20 @@ NPM_SAMPLE: dict[str, Any] = {
         }
     },
 }
+
+NPM_LEGACY_SAMPLE: dict[str, Any] = {
+    "actions": [],
+    "advisories": {
+        "1179": {
+            "id": 1179,
+            "module_name": "minimist",
+            "title": "Prototype Pollution",
+            "severity": "critical",
+            "vulnerable_versions": "<0.2.1 || >=1.0.0 <1.2.3",
+            "patched_versions": ">=1.2.3",
+            "github_advisory_id": "GHSA-vh95-rmgr-6w4m",
+            "cves": ["CVE-2020-7598"],
+            "findings": [{"version": "1.2.0", "paths": ["a>b>minimist"]}],
+        }
+    },
+}

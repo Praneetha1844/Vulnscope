@@ -1,4 +1,4 @@
-"""Parsers for SARIF 2.1.0, OSV-Scanner, pip-audit and npm audit JSON reports.
+"""Parsers for SARIF 2.1.0, OSV-Scanner, pip-audit and npm audit (v6 and v7+) JSON reports.
 
 Each parser validates the parts of the document it relies on and raises
 ``ParseError`` instead of silently producing partial results.
@@ -236,6 +236,39 @@ def parse_npm_audit(data: dict[str, Any]) -> list[Finding]:
     return findings
 
 
+def parse_npm_audit_legacy(data: dict[str, Any]) -> list[Finding]:
+    """Parse the npm 6 ``advisories`` shape (``npm audit --json`` before npm 7)."""
+    advisories = data.get("advisories")
+    if not isinstance(advisories, dict):
+        raise ParseError("legacy npm audit document has no 'advisories' object")
+
+    findings: list[Finding] = []
+    for key, adv in advisories.items():
+        if not isinstance(adv, dict) or not adv.get("module_name"):
+            raise ParseError(f"legacy npm advisory {key!r} has no module_name")
+        ids = sorted(
+            {str(i) for i in [adv.get("github_advisory_id"), *(adv.get("cves") or [])] if i}
+        )
+        paths = [p for f in adv.get("findings") or [] for p in f.get("paths") or []]
+        patched = str(adv.get("patched_versions") or "")
+        findings.append(
+            Finding(
+                kind=FindingKind.DEPENDENCY,
+                rule_id=ids[0] if ids else f"npm:{adv.get('id', key)}",
+                title=str(adv.get("title") or f"{adv['module_name']} is vulnerable"),
+                message=f"Affected range: {adv.get('vulnerable_versions') or 'unknown'}",
+                severity=_TEXT_SEVERITY.get(str(adv.get("severity", "")).lower(), Severity.MEDIUM),
+                source_tools=["npm-audit"],
+                package=str(adv["module_name"]),
+                advisory_ids=ids,
+                # patched_versions is a semver range such as ">=1.2.6", not a version number.
+                fix_versions=[patched] if patched and patched != "<0.0.0" else [],
+                dependency_path=paths[0].split(">") if paths else [],
+            )
+        )
+    return findings
+
+
 def _npm_advisory_id(via: dict[str, Any]) -> str | None:
     url = str(via.get("url") or "")
     if "GHSA-" in url:
@@ -254,6 +287,9 @@ def _npm_path(node: str | None) -> list[str]:
 
 def parse_document(data: Any) -> list[Finding]:
     """Detect the report format from its top-level keys and parse it."""
+    if isinstance(data, list) and data and all(isinstance(d, dict) and "vulns" in d for d in data):
+        # Older pip-audit releases print a bare list of dependencies.
+        return parse_pip_audit({"dependencies": data})
     if not isinstance(data, dict):
         raise ParseError("report must be a JSON object")
     if "runs" in data:
@@ -264,6 +300,8 @@ def parse_document(data: Any) -> list[Finding]:
         return parse_pip_audit(data)
     if "vulnerabilities" in data:
         return parse_npm_audit(data)
+    if "advisories" in data:
+        return parse_npm_audit_legacy(data)
     raise ParseError("unrecognised report format (expected SARIF, OSV, pip-audit or npm audit)")
 
 
